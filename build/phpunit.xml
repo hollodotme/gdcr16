@@ -1,0 +1,25 @@
+<phpunit
+        bootstrap="../tests/Unit/bootstrap.php"
+        verbose="true"
+        beStrictAboutOutputDuringTests="true"
+        beStrictAboutTestSize="true"
+        colors="true"
+        convertErrorsToExceptions="true"
+        convertNoticesToExceptions="true"
+        convertWarningsToExceptions="true">
+    <testsuites>
+        <testsuite name="GDCR16">
+            <directory suffix="Test.php">../tests/Unit</directory>
+        </testsuite>
+    </testsuites>
+    <filter>
+        <whitelist processUncoveredFilesFromWhitelist="true">
+            <directory suffix=".php">../src</directory>
+        </whitelist>
+        <blacklist>
+            <directory suffix=".php">../tests/Unit</directory>
+            <directory>../tests/Unit/Fixures</directory>
+            <directory>../vendor</directory>
+        </blacklist>
+    </filter>
+</phpunit>
