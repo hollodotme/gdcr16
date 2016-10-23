@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 /**
  * @author hollodotme
  */
@@ -9,30 +9,23 @@ namespace GDCR16\GOL;
  * Class Universe
  * @package GDCR16\GOL
  */
-class Universe
+final class Universe
 {
 	/** @var int */
 	private $generation;
 
-	/** @var int */
-	private $sizeX;
-
-	/** @var int */
-	private $sizeY;
-
 	/** @var Cell[] */
 	private $cells;
 
-	/**
-	 * @param int $sizeX
-	 * @param int $sizeY
-	 */
-	public function __construct( int $generation, int $sizeX, int $sizeY )
+	public function __construct( int $generation )
 	{
 		$this->generation = $generation;
-		$this->sizeX      = $sizeX;
-		$this->sizeY      = $sizeY;
 		$this->cells      = [];
+	}
+
+	public function getGeneration(): int
+	{
+		return $this->generation;
 	}
 
 	public function addCell( Cell $cell )
@@ -59,129 +52,83 @@ class Universe
 		return null;
 	}
 
-	/**
-	 * @return int
-	 */
-	public function getSizeX(): int
-	{
-		return $this->sizeX;
-	}
-
-	/**
-	 * @return int
-	 */
-	public function getSizeY(): int
-	{
-		return $this->sizeY;
-	}
-
 	public function getNextGeneration() : Universe
 	{
-		$universe = new Universe( $this->generation + 1, $this->getSizeX(), $this->getSizeY() );
+		$nextUniverse = new Universe( $this->generation + 1 );
 
-		// Berechnung
-		for ( $x = 0; $x < $this->getSizeX(); $x++ )
+		$this->addLivingCellsOfNextGeneration( $this->cells, 0, $nextUniverse, 0 );
+
+		return $nextUniverse;
+	}
+
+	private function addLivingCellsOfNextGeneration( array $cells, int $index, Universe $nextUniverse, int $depth )
+	{
+		if ( isset($cells[ $index ]) )
 		{
-			for ( $y = 0; $y < $this->getSizeY(); $y++ )
-			{
-				$cell = $this->getCellAt( $x, $y );
+			$this->checkCell( $cells[ $index ], $nextUniverse, $depth );
 
-				if ( $cell === null )
-				{
-					$cellsAround = $this->countCellsAround( $x, $y );
-					if ( $cellsAround == 3 )
-					{
-						$universe->addCell( new Cell( $x, $y ) );
-					}
-				}
-				else
-				{
-					$cellsAround = $this->countCellsAround( $x, $y );
-					if ( in_array( $cellsAround, [ 2, 3 ] ) )
-					{
-						$universe->addCell( new Cell( $x, $y ) );
-					}
-				}
+			$this->addLivingCellsOfNextGeneration( $cells, $index + 1, $nextUniverse, $depth );
+		}
+	}
+
+	private function checkCell( Cell $cell, Universe $universe, int $depth )
+	{
+		if ( $depth < 2 )
+		{
+			$livingNeighbours = $this->countLivingNeighboursOf( $cell );
+
+			if ( $livingNeighbours == 3 && !$this->cellExists( $cell ) )
+			{
+				$universe->addCell( $cell );
+			}
+
+			if ( in_array( $livingNeighbours, [ 2, 3 ] ) && $this->cellExists( $cell ) )
+			{
+				$universe->addCell( $cell );
+			}
+
+			if ( $depth < 1 )
+			{
+				$neighbours = $this->getNeighbours( $cell );
+
+				$this->addLivingCellsOfNextGeneration( $neighbours, 0, $universe, $depth + 1 );
 			}
 		}
-
-		return $universe;
 	}
 
-	private function countCellsAround( $x, $y ) : int
+	private function countLivingNeighboursOf( Cell $cell ) : int
 	{
-		$count = 0;
+		$neighbours       = $this->getNeighbours( $cell );
+		$livingNeighbours = array_filter( $neighbours, [ $this, 'cellExists' ] );
 
-		if ( $this->getCellAt( $x - 1, $y ) !== null )
-		{
-			$count++;
-		}
-
-		if ( $this->getCellAt( $x + 1, $y ) !== null )
-		{
-			$count++;
-		}
-
-		if ( $this->getCellAt( $x - 1, $y - 1 ) !== null )
-		{
-			$count++;
-		}
-
-		if ( $this->getCellAt( $x, $y - 1 ) !== null )
-		{
-			$count++;
-		}
-
-		if ( $this->getCellAt( $x + 1, $y - 1 ) !== null )
-		{
-			$count++;
-		}
-
-		if ( $this->getCellAt( $x + 1, $y + 1 ) !== null )
-		{
-			$count++;
-		}
-
-		if ( $this->getCellAt( $x, $y + 1 ) !== null )
-		{
-			$count++;
-		}
-
-		if ( $this->getCellAt( $x - 1, $y + 1 ) !== null )
-		{
-			$count++;
-		}
-
-		return $count;
+		return count( $livingNeighbours );
 	}
+
+	private function getNeighbours( Cell $cell )
+	{
+		$coordOffsets = [ [ -1, -1 ], [ 0, -1 ], [ 1, -1 ], [ 1, 0 ], [ 1, 1 ], [ -1, 1 ], [ -1, 0 ] ];
+
+		$neighbours = array_map(
+			function ( array $offsets ) use ( $cell )
+			{
+				return new Cell( $cell->getX() + $offsets[0], $cell->getY() + $offsets[1] );
+			},
+			$coordOffsets
+		);
+
+		return $neighbours;
+	}
+
+	private function cellExists( Cell $cell )
+	{
+		return in_array( $cell, $this->cells );
+	}
+
 
 	public function print()
 	{
 		echo "GENERATION: " . $this->generation . "\n";
-		echo str_repeat( "=", $this->getSizeX() * 5 ) . "\n";
-
-		for ( $i = 0; $i < $this->getSizeY(); $i++ )
-		{
-			echo "|";
-
-			for ( $j = 0; $j < $this->getSizeX(); $j++ )
-			{
-				if ( $this->getCellAt( $j, $i ) !== null )
-				{
-					echo "LEBT";
-				}
-				else
-				{
-					echo "    ";
-				}
-
-				echo "|";
-			}
-
-			echo "\n";
-		}
-
-		echo str_repeat( "=", $this->getSizeX() * 5 ) . "\n";
+		print_r( $this->cells );
 	}
 
 	public static function getInitial()
@@ -190,11 +137,14 @@ class Universe
 		$universe->addCell( new Cell( 1, 2 ) );
 		$universe->addCell( new Cell( 2, 2 ) );
 		$universe->addCell( new Cell( 3, 2 ) );
+
+		/*
 		$universe->addCell( new Cell( 2, 5 ) );
 		$universe->addCell( new Cell( 3, 6 ) );
 		$universe->addCell( new Cell( 1, 7 ) );
 		$universe->addCell( new Cell( 2, 7 ) );
 		$universe->addCell( new Cell( 3, 7 ) );
+		*/
 
 		return $universe;
 	}

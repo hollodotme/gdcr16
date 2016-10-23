@@ -11,14 +11,5 @@ $universe = Universe::getInitial();
 
 header( 'Content-Type: text/plain;' );
 
-$universe->print();
-
-for ( $i = 0; $i < 10; $i++ )
-{
-	sleep( 1 );
-
-	echo "\n\n";
-	$universe = $universe->getNextGeneration();
-	$universe->print();
-}
+$universe->buildGenerations(1);
 
